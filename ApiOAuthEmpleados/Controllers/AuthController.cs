@@ -18,11 +18,13 @@ namespace ApiOAuthEmpleados.Controllers
     {
         private RepositoryHospital repo;
         private HelperActionOAuthService helper;
+        private HelperCifrado cifrado;
 
-        public AuthController(RepositoryHospital repo, HelperActionOAuthService helper)
+        public AuthController(RepositoryHospital repo, HelperActionOAuthService helper, HelperCifrado cifrado)
         {
             this.repo = repo;
             this.helper = helper;
+            this.cifrado = cifrado;
         }
 
         [HttpPost]
@@ -39,9 +41,10 @@ namespace ApiOAuthEmpleados.Controllers
                 SigningCredentials credentials = new SigningCredentials(this.helper.GetTokenKey(), SecurityAlgorithms.HmacSha256);
 
                 string jsonEmpleado = JsonConvert.SerializeObject(empleado);
+                string jsonCifrado = this.cifrado.EncryptString(jsonEmpleado);
                 Claim[] informacion = new[]
                 {
-                    new Claim("UserData", jsonEmpleado)
+                    new Claim("UserData", jsonCifrado)
                 };
 
                 // EL TOKEN SE GENERA CON UNA CLASE Y DEBEMOS ALMACENAR LOS DATOS DE ISSUER, CREDENTIALS...
