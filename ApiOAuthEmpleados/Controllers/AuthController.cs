@@ -5,8 +5,10 @@ using ApiOAuthEmpleados.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.CompilerServices;
+using System.Security.Claims;
 
 namespace ApiOAuthEmpleados.Controllers
 {
@@ -35,9 +37,17 @@ namespace ApiOAuthEmpleados.Controllers
             {
                 // DEBEMOS CREAR UNAS CREDENCIALES PARA NUESTRO TOKEN
                 SigningCredentials credentials = new SigningCredentials(this.helper.GetTokenKey(), SecurityAlgorithms.HmacSha256);
+
+                string jsonEmpleado = JsonConvert.SerializeObject(empleado);
+                Claim[] informacion = new[]
+                {
+                    new Claim("UserData", jsonEmpleado)
+                };
+
                 // EL TOKEN SE GENERA CON UNA CLASE Y DEBEMOS ALMACENAR LOS DATOS DE ISSUER, CREDENTIALS...
                 JwtSecurityToken token = new JwtSecurityToken
                 (
+                    claims: informacion,
                     issuer: this.helper.Issuer,
                     audience: this.helper.Audience,
                     signingCredentials: credentials,
