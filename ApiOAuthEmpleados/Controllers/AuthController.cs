@@ -18,13 +18,11 @@ namespace ApiOAuthEmpleados.Controllers
     {
         private RepositoryHospital repo;
         private HelperActionOAuthService helper;
-        private HelperCifrado cifrado;
 
-        public AuthController(RepositoryHospital repo, HelperActionOAuthService helper, HelperCifrado cifrado)
+        public AuthController(RepositoryHospital repo, HelperActionOAuthService helper)
         {
             this.repo = repo;
             this.helper = helper;
-            this.cifrado = cifrado;
         }
 
         [HttpPost]
@@ -40,11 +38,22 @@ namespace ApiOAuthEmpleados.Controllers
                 // DEBEMOS CREAR UNAS CREDENCIALES PARA NUESTRO TOKEN
                 SigningCredentials credentials = new SigningCredentials(this.helper.GetTokenKey(), SecurityAlgorithms.HmacSha256);
 
-                string jsonEmpleado = JsonConvert.SerializeObject(empleado);
-                string jsonCifrado = this.cifrado.EncryptString(jsonEmpleado);
+                // CREAMOS NUESTRO MODELO PARA GUARDARLO EN TOKEN
+                EmpleadoModel modelEmp = new EmpleadoModel
+                {
+                    IdEmpleado = empleado.IdEmpleado,
+                    Apellido = empleado.Apellido,
+                    Oficio = empleado.Oficio,
+                    Salario = empleado.Salario,
+                    IdDepartamento = empleado.IdDepartamento
+                };
+
+                string jsonEmpleado = JsonConvert.SerializeObject(modelEmp);
+                string jsonCifrado = HelperCifrado.CifrarString(jsonEmpleado);
                 Claim[] informacion = new[]
                 {
-                    new Claim("UserData", jsonCifrado)
+                    new Claim("UserData", jsonCifrado),
+                    new Claim(ClaimTypes.Role, empleado.Oficio)
                 };
 
                 // EL TOKEN SE GENERA CON UNA CLASE Y DEBEMOS ALMACENAR LOS DATOS DE ISSUER, CREDENTIALS...

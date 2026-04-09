@@ -3,69 +3,77 @@ using System.Text;
 
 namespace ApiOAuthEmpleados.Helpers
 {
-    public class HelperCifrado
+    public static class HelperCifrado
     {
-        private readonly byte[] key;
+        private static string key;
 
-        public HelperCifrado(IConfiguration configuration)
+        public static void Initialize(IConfiguration configuration)
         {
-            string secret = configuration["Encriptado:SecretKey"];
-            key = Encoding.UTF8.GetBytes(secret);
+            key = configuration.GetValue<string>("Encriptado:SecretKey");
         }
 
-        public string EncryptString(string plainText)
+        public static string CifrarString(string data)
         {
-            using (Aes aesAlg = Aes.Create())
+            byte[] keyData = Encoding.UTF8.GetBytes(key);
+            string res = EncryptString(keyData, data);
+            return res;
+        }
+
+        public static string DescifrarString(string data)
+        {
+            byte[] keyData = Encoding.UTF8.GetBytes(key);
+            string res = DecryptString(keyData, data);
+            return res;
+
+        }
+
+        private static string EncryptString(byte[] key, string plainText)
+        {
+            byte[] iv = new byte[16];
+            byte[] array;
+
+            using (Aes aes = Aes.Create())
             {
-                aesAlg.Key = key;
+                aes.Key = key;
+                aes.IV = iv;
 
-                aesAlg.GenerateIV();
-                byte[] iv = aesAlg.IV;
+                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
-                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, iv);
-
-                using (MemoryStream msEncrypt = new MemoryStream())
+                using (MemoryStream memoryStream = new MemoryStream())
                 {
-                    msEncrypt.Write(iv, 0, iv.Length);
-
-                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, encryptor, CryptoStreamMode.Write))
                     {
-                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        using (StreamWriter streamWriter = new StreamWriter((Stream)cryptoStream))
                         {
-                            swEncrypt.Write(plainText);
+                            streamWriter.Write(plainText);
                         }
-                    }
 
-                    return Convert.ToBase64String(msEncrypt.ToArray());
+                        array = memoryStream.ToArray();
+                    }
                 }
             }
+
+            return Convert.ToBase64String(array);
         }
 
-        public string DecryptString(string cipherText)
+        private static string DecryptString(byte[] key, string cipherText)
         {
-            byte[] fullCipher = Convert.FromBase64String(cipherText);
+            byte[] iv = new byte[16];
+            byte[] buffer = Convert.FromBase64String(cipherText);
 
-            using (Aes aesAlg = Aes.Create())
+            using (Aes aes = Aes.Create())
             {
-                aesAlg.Key = key;
+                aes.Key = key;
+                aes.IV = iv;
+                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
 
-                byte[] iv = new byte[aesAlg.BlockSize / 8];
-                byte[] cipher = new byte[fullCipher.Length - iv.Length];
-
-                Array.Copy(fullCipher, 0, iv, 0, iv.Length);
-                Array.Copy(fullCipher, iv.Length, cipher, 0, cipher.Length);
-
-                aesAlg.IV = iv;
-
-                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
-
-                using (MemoryStream msDecrypt = new MemoryStream(cipher))
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
                 {
-                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
                     {
-                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        using (StreamReader streamReader = new StreamReader((Stream)cryptoStream))
                         {
-                            return srDecrypt.ReadToEnd();
+                            return streamReader.ReadToEnd();
                         }
                     }
                 }

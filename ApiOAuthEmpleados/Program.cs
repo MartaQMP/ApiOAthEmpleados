@@ -6,12 +6,14 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+HelperCifrado.Initialize(builder.Configuration);
+
 // Add services to the container.
 HelperActionOAuthService helper = new HelperActionOAuthService(builder.Configuration);
 builder.Services.AddSingleton<HelperActionOAuthService>(helper);
-builder.Services.AddSingleton<HelperCifrado>();
 builder.Services.AddAuthentication(helper.GetAuthenticationSchema()).AddJwtBearer(helper.GetJWtBearerOptions());
-
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<HelperEmpleadoToken>();
 
 builder.Services.AddTransient<RepositoryHospital>();
 string connection = builder.Configuration.GetConnectionString("Azure");
