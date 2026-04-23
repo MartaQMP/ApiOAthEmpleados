@@ -1,10 +1,25 @@
 using ApiOAthEmpleados.Data;
 using ApiOAthEmpleados.Repositories;
 using ApiOAuthEmpleados.Helpers;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Azure;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAzureClients(factory => 
+{
+    factory.AddSecretClient(builder.Configuration.GetSection("KeyVault"));
+});
+
+/* ESTE OBJETO SOLAMENTE LO NECESITAMOS AQUI, LO DICHO, RECUPERAMOS LOS VALORES
+ * Y LOS ASIGNAMOS A UNA CLASE 
+ * RECUPERAMOS EL SecretClient PARA LOS SECRETOS DE KEY VAULT */
+SecretClient secretClient = builder.Services.BuildServiceProvider().GetService<SecretClient>();
+//ACCEDEMOS AL SECRETO
+KeyVaultSecret secret = await secretClient.GetSecretAsync("secretsqlazuremqmp");
+
 
 HelperCifrado.Initialize(builder.Configuration);
 
@@ -16,7 +31,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<HelperEmpleadoToken>();
 
 builder.Services.AddTransient<RepositoryHospital>();
-string connection = builder.Configuration.GetConnectionString("Azure");
+string connection = secret.Value;
 builder.Services.AddDbContext<HospitalContext>(options => options.UseSqlServer(connection));
 
 builder.Services.AddControllers();
